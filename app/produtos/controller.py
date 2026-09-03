@@ -1,44 +1,41 @@
-from fastapi import APIRouter, HTTPException, status
-from .schemas import ProdutoAtualizar, ProdutoCriar, ProdutoPublico
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from ..database import get_db
+from . import repository, schemas
 
 router = APIRouter(prefix="/produtos", tags=["Produtos"])
 
-# Banco de mentira: uma lista em memoria. Vira banco de verdade no encontro 4.
-produtos: list[dict] = []
+
+@router.get("/", response_model=list[schemas.ProdutoPublico])
+def listar(db: Session = Depends(get_db)):
+    return repository.listar_produtos(db)
 
 
-@router.get("/", response_model=list[ProdutoPublico])
-def listar():
-    return produtos
-
-@router.post("/", response_model=ProdutoPublico, status_code=201)
-def criar(dados: ProdutoCriar):
-    novo = {"id": len(produtos) + 1, **dados.model_dump()}
-    produtos.append(novo)
-    return novo
+@router.post("/", response_model=schemas.ProdutoPublico, status_code=201)
+def criar(dados: schemas.ProdutoCriar, db: Session = Depends(get_db)):
+    return repository.criar_produto(db, dados)
 
 
-@router.get("/{produto_id}", response_model=ProdutoPublico)
-def buscar(produto_id: int):
-    for p in produtos:
-        if p["id"] == produto_id:
-            return p
-    raise HTTPException(status_code=404, detail="Produto nao encontrado")
+@router.get("/{produto_id}", response_model=schemas.ProdutoPublico)
+def buscar(produto_id: int, db: Session = Depends(get_db)):
+    produto = repository.buscar_produto_por_id(db, produto_id)
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto nao encontrado")
+    return produto
 
 
-@router.patch("/{produto_id}", response_model=ProdutoPublico)
-def atualizar(produto_id: int, dados: ProdutoAtualizar):
-    for p in produtos:
-        if p["id"] == produto_id:
-            p.update(dados.model_dump(exclude_unset=True))
-            return p
-    raise HTTPException(status_code=404, detail="Produto nao encontrado")
+@router.patch("/{produto_id}", response_model=schemas.ProdutoPublico)
+def atualizar(produto_id: int, dados: schemas.ProdutoAtualizar, db: Session = Depends(get_db)):
+    produto = repository.buscar_produto_por_id(db, produto_id)
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto nao encontrado")
+    return repository.atualizar_produto(db, produto, dados)
+
 
 @router.delete("/{produto_id}", status_code=204)
-def apagar(produto_id: int):
-    for p in produtos:
-        if p["id"] == produto_id:
-            produtos.remove(p)
-            return
-    raise HTTPException(status_code=404, detail="Produto nao encontrado")
-
+def apagar(produto_id: int, db: Session = Depends(get_db)):
+    produto = repository.buscar_produto_por_id(db, produto_id)
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto nao encontrado")
+    repository.deletar_produto(db, produto)
+    return
