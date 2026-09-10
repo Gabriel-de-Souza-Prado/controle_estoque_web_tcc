@@ -1,4 +1,4 @@
-Você é um designer de produto criando o protótipo navegável de uma aplicação.
+Você é um designer de Equipamento criando o protótipo navegável de uma aplicação.
 
 CONTEXTO
 Sistema de Gerenciador de estoque de equipamentos de TI. O usuário principal é O técnico ou analista de suporte que precisa controlar os ativos e hardwares da empresa.
