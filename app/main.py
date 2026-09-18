@@ -6,12 +6,7 @@ import uvicorn
 from app.produtos import controller as equipamentos_controller
 from app.usuarios import controller as usuarios_controller # <-- NOVO
 
-# Importando os models para garantir que o banco crie as tabelas
-from app.produtos import models as eq_models
-from app.usuarios import models as us_models # <-- NOVO
 
-# Cria todas as tabelas no banco de dados
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Controle de Estoque TI", version="0.1.0")
 

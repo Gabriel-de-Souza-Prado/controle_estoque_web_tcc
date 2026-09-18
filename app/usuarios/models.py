@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
 
 from ..database import Base
-
 
 class Usuario(Base):
     """A TABELA de usuarios.
@@ -17,3 +17,7 @@ class Usuario(Base):
     nome = Column(String(80), nullable=False)
     email = Column(String(120), nullable=False, unique=True, index=True)
     senha_hash = Column(String(100), nullable=False)
+
+    # A lista de equipamentos que esse TI cadastrou. 
+    # Aponta para a variável "dono" lá no models.py de equipamentos.
+    equipamentos = relationship("Equipamento", back_populates="dono")

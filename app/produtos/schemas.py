@@ -1,30 +1,52 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, field_validator
 
-# Colocamos os campos comuns aqui para não ficar repetindo código
-class EquipamentoBase(BaseModel):
-    dti: str = Field(min_length=3)
-    modelo: str = Field(min_length=2)
-    numero_serie: str = Field(min_length=2)
-    categoria: str = Field(min_length=2)
-    status: str = Field(min_length=2)
-    observacao: str | None = None  # Opcional
+def _tamanho_minimo_3(valor: str):
+    if len(valor.strip()) < 3:
+        raise ValueError("este campo precisa ter pelo menos 3 caracteres")
+    return valor.strip()
 
-# Schema para CRIAR
-class EquipamentoCriar(EquipamentoBase):
-    pass 
+def _tamanho_minimo_2(valor: str):
+    if len(valor.strip()) < 2:
+        raise ValueError("este campo precisa ter pelo menos 2 caracteres")
+    return valor.strip()
 
-# Schema para RETORNAR ao usuário (Publico)
-class EquipamentoPublico(EquipamentoBase):
+class EquipamentoCriar(BaseModel):
+    dti: str
+    modelo: str
+    numero_serie: str
+    categoria: str
+    status: str
+    departamento: str # <-- NOVO
+    observacao: str | None = None
+
+    @field_validator("dti", "departamento")
+    @classmethod
+    def valida_dti_e_dep(cls, v):
+        return _tamanho_minimo_3(v)
+
+    @field_validator("modelo", "numero_serie", "categoria", "status")
+    @classmethod
+    def valida_outros_campos(cls, v):
+        return _tamanho_minimo_2(v)
+
+class EquipamentoPublico(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
+    dti: str
+    modelo: str
+    numero_serie: str
+    categoria: str
+    status: str
+    departamento: str # <-- NOVO
+    observacao: str | None
+    dono_id: int | None
 
-    class Config:
-        from_attributes = True
-
-# Schema para ATUALIZAR (Tudo Opcional)
 class EquipamentoAtualizar(BaseModel):
     dti: str | None = None
     modelo: str | None = None
     numero_serie: str | None = None
     categoria: str | None = None
     status: str | None = None
+    departamento: str | None = None # <-- NOVO
     observacao: str | None = None
