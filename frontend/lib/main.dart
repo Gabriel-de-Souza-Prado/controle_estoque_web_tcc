@@ -1,53 +1,86 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'repositories/equipamento_repository.dart';
 import 'repositories/token_repository.dart';
 import 'repositories/usuario_repository.dart';
 import 'routes.dart';
 import 'screens/cadastro_screen.dart';
+import 'screens/equipamento_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/movimentacoes_screen.dart';
 import 'screens/perfil_screen.dart';
 import 'screens/produtos_screen.dart';
 import 'services/auth_service.dart';
+import 'services/equipamento_service.dart';
 import 'widgets/rota_protegida.dart';
 
-// Aqui as camadas se montam, como o main.py monta a API no backend: os
-// repositórios entram no service, e o service fica no topo do app, onde toda
-// tela o alcança, sem passar de construtor em construtor.
 Future<void> main() async {
-  // O Flutter precisa estar de pé antes de qualquer pacote falar com o aparelho.
   WidgetsFlutterBinding.ensureInitialized();
-  final auth = AuthService(UsuarioRepository(), tokens: TokenRepository());
-  // Antes de a primeira tela aparecer: se o aparelho guardou um token que a
-  // API ainda aceita, a sessão volta e o app abre logado.
+
+  final auth = AuthService(
+    UsuarioRepository(),
+    tokens: TokenRepository(),
+  );
+
   await auth.restaurar();
+
   runApp(
-    ChangeNotifierProvider.value(value: auth, child: const MeuAppEstoque()),
+    ChangeNotifierProvider.value(
+      value: auth,
+      child: const MeuAppEstoque(),
+    ),
   );
 }
 
 class MeuAppEstoque extends StatelessWidget {
-  const MeuAppEstoque({super.key});
+  const MeuAppEstoque({
+    super.key,
+    this.equipamentoRepository,
+  });
+
+  // Permite injetar uma API simulada nos testes automatizados.
+  final EquipamentoRepository? equipamentoRepository;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Estoque TI',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: false),
-      // A rota inicial é a tela inicial: sem sessão, o guarda (RotaProtegida)
-      // mostra o login no lugar; com sessão restaurada, ela abre direto.
-      initialRoute: AppRoutes.inicio,
-      routes: {
-        AppRoutes.login: (context) => const LoginScreen(),
-        AppRoutes.cadastro: (context) => const CadastroScreen(),
-        AppRoutes.inicio: (context) => const RotaProtegida(tela: HomeScreen()),
-        AppRoutes.produtos: (context) => const RotaProtegida(tela: ProdutosScreen()),
-        AppRoutes.movimentacoes: (context) =>
-            const RotaProtegida(tela: MovimentacoesScreen()),
-        AppRoutes.perfil: (context) => const RotaProtegida(tela: PerfilScreen()),
-      },
+    return Provider<EquipamentoService>(
+      create: (context) => EquipamentoService(
+        equipamentoRepository ?? EquipamentoRepository(),
+        context.read<AuthService>(),
+      ),
+      child: MaterialApp(
+        title: 'Estoque TI',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          useMaterial3: false,
+        ),
+        initialRoute: AppRoutes.inicio,
+        routes: {
+          AppRoutes.login: (context) => const LoginScreen(),
+          AppRoutes.cadastro: (context) => const CadastroScreen(),
+          AppRoutes.inicio: (context) =>
+              const RotaProtegida(tela: HomeScreen()),
+          AppRoutes.produtos: (context) =>
+              const RotaProtegida(tela: ProdutosScreen()),
+          AppRoutes.equipamento: (context) {
+            final argumento =
+                ModalRoute.of(context)?.settings.arguments;
+
+            return RotaProtegida(
+              tela: EquipamentoScreen(
+                id: argumento is int ? argumento : null,
+              ),
+            );
+          },
+          AppRoutes.movimentacoes: (context) =>
+              const RotaProtegida(tela: MovimentacoesScreen()),
+          AppRoutes.perfil: (context) =>
+              const RotaProtegida(tela: PerfilScreen()),
+        },
+      ),
     );
   }
 }
