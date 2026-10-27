@@ -21,9 +21,8 @@ class _ProdutosScreenState extends State<ProdutosScreen> {
     super.initState();
 
     // O pedido nasce uma única vez, não a cada reconstrução da tela.
-    pedido = Future<List<EquipamentoModel>>.microtask(
-      () => context.read<EquipamentoService>().listar(),
-    );
+    final servico = context.read<EquipamentoService>();
+    pedido = Future<List<EquipamentoModel>>.microtask(servico.listar);
   }
 
   void tentarDeNovo() {
@@ -41,9 +40,7 @@ class _ProdutosScreenState extends State<ProdutosScreen> {
         future: pedido,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
@@ -54,8 +51,7 @@ class _ProdutosScreenState extends State<ProdutosScreen> {
             );
           }
 
-          final equipamentos =
-              snapshot.data ?? const <EquipamentoModel>[];
+          final equipamentos = snapshot.data ?? const <EquipamentoModel>[];
 
           if (equipamentos.isEmpty) {
             return const Center(
@@ -75,14 +71,12 @@ class _ProdutosScreenState extends State<ProdutosScreen> {
 
           return ListView.separated(
             itemCount: equipamentos.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
+            separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final equipamento = equipamentos[index];
 
               return ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.devices),
-                ),
+                leading: const CircleAvatar(child: Icon(Icons.devices)),
                 title: Text(equipamento.modelo),
                 subtitle: Text(
                   'DTI: ${equipamento.dti} • '
@@ -92,15 +86,29 @@ class _ProdutosScreenState extends State<ProdutosScreen> {
                 ),
                 isThreeLine: true,
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  AppRoutes.equipamento,
-                  arguments: equipamento.id,
-                ),
+                onTap: () async {
+                  final mudou = await Navigator.pushNamed(
+                    context,
+                    AppRoutes.equipamento,
+                    arguments: equipamento.id,
+                  );
+                  if (mudou == true && mounted) tentarDeNovo();
+                },
               );
             },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Novo equipamento',
+        onPressed: () async {
+          final salvou = await Navigator.pushNamed(
+            context,
+            AppRoutes.formulario,
+          );
+          if (salvou == true && mounted) tentarDeNovo();
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -127,10 +135,7 @@ class _EstadoComErro extends StatelessWidget {
           children: [
             const Icon(Icons.cloud_off, size: 56),
             const SizedBox(height: 16),
-            Text(
-              titulo,
-              textAlign: TextAlign.center,
-            ),
+            Text(titulo, textAlign: TextAlign.center),
             const SizedBox(height: 8),
             Text(
               erro,

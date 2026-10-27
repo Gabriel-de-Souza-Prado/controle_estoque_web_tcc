@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -6,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/main.dart';
+import 'package:frontend/repositories/equipamento_repository.dart';
 import 'package:frontend/repositories/usuario_repository.dart';
 import 'package:frontend/routes.dart';
 import 'package:frontend/screens/cadastro_screen.dart';
@@ -68,7 +70,10 @@ AuthService authDeMentira({
       final email = pedido.bodyFields['username'];
       if (contas[email]?['senha'] == pedido.bodyFields['password']) {
         return http.Response(
-          jsonEncode({'access_token': 'token-de-$email', 'token_type': 'bearer'}),
+          jsonEncode({
+            'access_token': 'token-de-$email',
+            'token_type': 'bearer',
+          }),
           200,
         );
       }
@@ -94,7 +99,14 @@ AuthService authDeMentira({
 // O app de verdade, com a sessão de mentira no topo, como o main.dart faz.
 // O .value entrega ao Provider um objeto que já existe, em vez de criá-lo.
 Widget appDeMentira(AuthService auth) {
-  return ChangeNotifierProvider.value(value: auth, child: const MeuAppEstoque());
+  return ChangeNotifierProvider.value(
+    value: auth,
+    child: MeuAppEstoque(
+      equipamentoRepository: EquipamentoRepository(
+        cliente: MockClient((_) async => http.Response('[]', 200)),
+      ),
+    ),
+  );
 }
 
 Future<void> preencherEEntrar(WidgetTester tester, String senha) async {
@@ -132,14 +144,21 @@ Future<String?> tokenGuardado() async {
 
 // Confere que o cadastro foi recusado, com esta frase para a tela.
 Matcher recusadoCom(String frase) {
-  return throwsA(isA<ErroDeCadastro>().having((e) => e.mensagem, 'mensagem', frase));
+  return throwsA(
+    isA<ErroDeCadastro>().having((e) => e.mensagem, 'mensagem', frase),
+  );
 }
 
 void main() {
-  testWidgets('a tela de login tem e-mail, senha e o botão Entrar', (tester) async {
+  testWidgets('a tela de login tem e-mail, senha e o botão Entrar', (
+    tester,
+  ) async {
     await tester.pumpWidget(appDeMentira(authDeMentira()));
     expect(find.byType(TextField), findsNWidgets(2));
-    expect(find.widgetWithText(ElevatedButton, 'Entrar no Sistema'), findsOneWidget);
+    expect(
+      find.widgetWithText(ElevatedButton, 'Entrar no Sistema'),
+      findsOneWidget,
+    );
     expect(find.text('Não tem uma conta? Cadastre-se'), findsOneWidget);
   });
 
@@ -154,7 +173,9 @@ void main() {
     expect(find.widgetWithText(ElevatedButton, 'Cadastrar'), findsOneWidget);
   });
 
-  testWidgets('com a senha certa, a rota /inicio abre a tela inicial', (tester) async {
+  testWidgets('com a senha certa, a rota /inicio abre a tela inicial', (
+    tester,
+  ) async {
     await tester.pumpWidget(appDeMentira(authDeMentira()));
     await preencherEEntrar(tester, 'segredo123');
     expect(find.byType(HomeScreen), findsOneWidget);
@@ -162,7 +183,9 @@ void main() {
     expect(find.byType(LoginScreen), findsNothing);
   });
 
-  testWidgets('com a senha errada, fica no login e mostra o erro', (tester) async {
+  testWidgets('com a senha errada, fica no login e mostra o erro', (
+    tester,
+  ) async {
     final auth = authDeMentira();
     await tester.pumpWidget(appDeMentira(auth));
     await tester.enterText(find.byType(TextField).at(0), 'ana@estoque.com');
@@ -177,14 +200,18 @@ void main() {
     expect(auth.logado, isFalse);
   });
 
-  testWidgets('o link de cadastro abre o cadastro pelo nome da rota', (tester) async {
+  testWidgets('o link de cadastro abre o cadastro pelo nome da rota', (
+    tester,
+  ) async {
     await tester.pumpWidget(appDeMentira(authDeMentira()));
     await tester.tap(find.text('Não tem uma conta? Cadastre-se'));
     await tester.pumpAndSettle();
     expect(find.byType(CadastroScreen), findsOneWidget);
   });
 
-  testWidgets('cadastrar pela tela cria a conta e abre a tela inicial', (tester) async {
+  testWidgets('cadastrar pela tela cria a conta e abre a tela inicial', (
+    tester,
+  ) async {
     await tester.pumpWidget(appDeMentira(authDeMentira()));
     await preencherECadastrar(tester, 'bia@estoque.com', 'segredo456');
     expect(find.byType(HomeScreen), findsOneWidget);
@@ -192,7 +219,9 @@ void main() {
     expect(find.byType(CadastroScreen), findsNothing);
   });
 
-  testWidgets('e-mail repetido: a tela mostra o erro e fica no cadastro', (tester) async {
+  testWidgets('e-mail repetido: a tela mostra o erro e fica no cadastro', (
+    tester,
+  ) async {
     await tester.pumpWidget(appDeMentira(authDeMentira()));
     await preencherECadastrar(tester, 'ana@estoque.com', 'segredo456');
     expect(find.text('Já existe uma conta com este e-mail.'), findsOneWidget);
@@ -210,29 +239,45 @@ void main() {
     expect(find.byType(CadastroScreen), findsNothing);
   });
 
-  testWidgets('o guarda: sem sessão, a rota /inicio mostra o login', (tester) async {
+  testWidgets('o guarda: sem sessão, a rota /inicio mostra o login', (
+    tester,
+  ) async {
     await tester.pumpWidget(appDeMentira(authDeMentira()));
-    Navigator.of(tester.element(find.byType(LoginScreen))).pushNamed(AppRoutes.inicio);
+    Navigator.of(tester.element(find.byType(LoginScreen)))
+        .pushNamed(AppRoutes.inicio);
     await tester.pumpAndSettle();
     expect(find.byType(HomeScreen), findsNothing);
     expect(find.byType(LoginScreen), findsOneWidget);
   });
 
-  testWidgets('o menu mostra o nome sem receber nada pelo construtor', (tester) async {
+  testWidgets('o menu mostra o nome sem receber nada pelo construtor', (
+    tester,
+  ) async {
     await tester.pumpWidget(appDeMentira(authDeMentira()));
     await preencherEEntrar(tester, 'segredo123');
     await abrirOMenu(tester);
     final menu = find.byType(Drawer);
-    expect(find.descendant(of: menu, matching: find.text('Ana')), findsOneWidget);
-    expect(find.descendant(of: menu, matching: find.text('ana@estoque.com')), findsOneWidget);
+    expect(
+      find.descendant(of: menu, matching: find.text('Ana')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: menu, matching: find.text('ana@estoque.com')),
+      findsOneWidget,
+    );
     await tester.tap(find.descendant(of: menu, matching: find.text('Perfil')));
     await tester.pumpAndSettle();
     expect(find.byType(PerfilScreen), findsOneWidget);
     await abrirOMenu(tester);
-    expect(find.descendant(of: find.byType(Drawer), matching: find.text('Ana')), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(Drawer), matching: find.text('Ana')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('sair volta ao login, limpa a pilha e apaga a sessão', (tester) async {
+  testWidgets('sair volta ao login, limpa a pilha e apaga a sessão', (
+    tester,
+  ) async {
     final auth = authDeMentira();
     await tester.pumpWidget(appDeMentira(auth));
     await preencherEEntrar(tester, 'segredo123');
@@ -245,12 +290,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.byType(ProdutosScreen), findsNothing);
-    expect(Navigator.of(tester.element(find.byType(LoginScreen))).canPop(), isFalse);
+    expect(
+      Navigator.of(tester.element(find.byType(LoginScreen))).canPop(),
+      isFalse,
+    );
     expect(auth.logado, isFalse);
     expect(await tokenGuardado(), isNull);
   });
 
-  testWidgets('com a sessão restaurada, o app abre direto na tela inicial', (tester) async {
+  testWidgets('com a sessão restaurada, o app abre direto na tela inicial', (
+    tester,
+  ) async {
     final auth = authDeMentira(guardado: {'token': 'token-de-ana@estoque.com'});
     await auth.restaurar();
     await tester.pumpWidget(appDeMentira(auth));
@@ -259,7 +309,9 @@ void main() {
     expect(find.byType(LoginScreen), findsNothing);
   });
 
-  testWidgets('o watch redesenha a tela quando o service avisa', (tester) async {
+  testWidgets('o watch redesenha a tela quando o service avisa', (
+    tester,
+  ) async {
     final auth = authDeMentira();
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
@@ -307,13 +359,16 @@ void main() {
     expect(avisos, 2);
   });
 
-  test('cadastrar cria a conta e já entra com ela, pelo mesmo caminho do login', () async {
-    final auth = authDeMentira();
-    await auth.cadastrar('Bia', 'bia@estoque.com', 'segredo456');
-    expect(auth.logado, isTrue);
-    expect(auth.usuarioAtual?.nome, 'Bia');
-    expect(auth.token, 'token-de-bia@estoque.com');
-  });
+  test(
+    'cadastrar cria a conta e já entra com ela, pelo mesmo caminho do login',
+    () async {
+      final auth = authDeMentira();
+      await auth.cadastrar('Bia', 'bia@estoque.com', 'segredo456');
+      expect(auth.logado, isTrue);
+      expect(auth.usuarioAtual?.nome, 'Bia');
+      expect(auth.token, 'token-de-bia@estoque.com');
+    },
+  );
 
   test('o service traduz a recusa da API: e-mail repetido (409) e campo inválido (422)', () async {
     final auth = authDeMentira();

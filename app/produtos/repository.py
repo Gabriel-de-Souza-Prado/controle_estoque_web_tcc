@@ -10,7 +10,7 @@ def listar_equipamentos(db: Session, dti: str | None = None, departamento: str |
     if departamento:
         consulta = consulta.filter(models.Equipamento.departamento.ilike(f"%{departamento}%"))
         
-    return consulta.all()
+    return consulta.order_by(models.Equipamento.modelo, models.Equipamento.dti).all()
 
 def buscar_equipamento_por_id(db: Session, equipamento_id: int):
     return db.query(models.Equipamento).filter(models.Equipamento.id == equipamento_id).first()

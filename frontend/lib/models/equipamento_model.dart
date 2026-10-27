@@ -36,3 +36,24 @@ class EquipamentoModel {
     );
   }
 }
+
+/// Dados do formulário, sem id nem dono: esses valores pertencem à API.
+class DadosEquipamento {
+  const DadosEquipamento({
+    required this.dti,
+    required this.modelo,
+    required this.numeroSerie,
+    required this.categoria,
+    required this.status,
+    required this.departamento,
+    this.observacao,
+  });
+
+  final String dti;
+  final String modelo;
+  final String numeroSerie;
+  final String categoria;
+  final String status;
+  final String departamento;
+  final String? observacao;
+}
