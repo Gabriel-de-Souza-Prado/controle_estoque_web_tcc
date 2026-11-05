@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../routes.dart';
 import '../services/auth_service.dart';
+import 'aviso.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -19,23 +21,28 @@ class AppDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.home),
             title: const Text('Início'),
-            onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.inicio),
+            onTap: () =>
+                Navigator.pushReplacementNamed(context, AppRoutes.inicio),
           ),
           ListTile(
             leading: const Icon(Icons.inventory_2),
             title: const Text('Produtos'),
-            onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.produtos),
+            onTap: () =>
+                Navigator.pushReplacementNamed(context, AppRoutes.produtos),
           ),
           ListTile(
             leading: const Icon(Icons.swap_horiz),
             title: const Text('Movimentações'),
-            onTap: () =>
-                Navigator.pushReplacementNamed(context, AppRoutes.movimentacoes),
+            onTap: () => Navigator.pushReplacementNamed(
+              context,
+              AppRoutes.movimentacoes,
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.person),
             title: const Text('Perfil'),
-            onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.perfil),
+            onTap: () =>
+                Navigator.pushReplacementNamed(context, AppRoutes.perfil),
           ),
           const Divider(),
           ListTile(
@@ -44,6 +51,7 @@ class AppDrawer extends StatelessWidget {
             onTap: () async {
               await context.read<AuthService>().sair();
               if (!context.mounted) return;
+              avisar(context, 'Sessão encerrada');
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 AppRoutes.login,

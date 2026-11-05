@@ -37,7 +37,7 @@ Em outro terminal, dentro de `frontend/`:
 flutter run -d edge --web-port 5000
 ```
 
-Esta máquina tem Python 3.15. O ambiente local usa dependências compatíveis com essa versão, dentro dos intervalos declarados em `pyproject.toml`. Algumas versões binárias antigas de `poetry.lock` não têm distribuição para Python 3.15 no Windows; para reproduzir exatamente aquele arquivo, use Python 3.14. O arquivo de lock original foi preservado.
+Ambiente local validado com Python **3.14.8** e Flutter **3.47.6** (Dart **3.13.5**). As dependências Python foram instaladas na `.venv` dentro dos intervalos de `pyproject.toml`, com `httpx` para os testes. Para reproduzir as versões exatas de `poetry.lock`, use `poetry install --no-root`; o lock original foi preservado. O `.env` e a `.venv` são locais e não acompanham o repositório.
 
 Para verificar este ambiente já preparado, na raiz:
 
@@ -124,6 +124,34 @@ A validação acontece nas duas pontas: `Form`, `TextFormField` e seus validador
 
 O estoque é compartilhado: usuários autenticados podem consultar e alterar os equipamentos. `dono_id` identifica quem cadastrou; ele não restringe a visualização. As regras de empréstimo do exemplo de biblioteca não fazem parte deste domínio. A tela de movimentações ainda é provisória.
 
+### Aula 13 — busca, filtro e avisos
+
+A lista tem o campo **Buscar pelo DTI**. Ao pressionar Enter, o texto é enviado sem espaços nas pontas pelo caminho tela → service → repository → API. A API procura parte do DTI, sem distinguir maiúsculas e minúsculas, usando `ilike` no repository do backend. A pesquisa não filtra uma cópia local da lista. Uma resposta vazia explica o DTI procurado; Enter com o campo vazio volta à lista sem busca.
+
+O chip **Só no estoque** envia `status=No Estoque`. Ele combina com a busca: por exemplo, `GET /equipamentos/?dti=001&status=No+Estoque`. O botão **×** limpa o texto e refaz o pedido, preservando o chip. Desligar o chip remove o filtro de status. Criar, editar, excluir ou tentar novamente mantém a busca e o filtro ativos.
+
+`widgets/aviso.dart` centraliza os `SnackBar`: verde no sucesso e vermelho na falha. Criar e editar mostram **Equipamento salvo**; excluir mostra **Equipamento excluído**. Se a API recusar, a frase detalhada permanece no formulário/detalhe e o aviso informa a falha. Os dados digitados são preservados. Cadastro, login e saída também usam o aviso compartilhado. O aviso de sucesso permanece visível ao voltar para a lista.
+
+### Checklist das seis funcionalidades mínimas
+
+- [x] **Autenticação:** cadastro, login, sessão persistida e rotas protegidas. Prova: sair, tentar abrir a lista sem sessão e entrar novamente.
+- [x] **CRUD:** botão +, detalhe, edição e exclusão com confirmação. Prova: criar, editar e excluir um equipamento; conferir a lista após cada ação.
+- [x] **Relacionamento com o usuário:** `dono_id` vem do usuário autenticado, nunca de um campo do formulário. **Adaptação autorizada pelo professor:** estoque compartilhado entre os técnicos. Prova: criar com uma conta e consultar/editar com outra; o `dono_id` continua identificando quem cadastrou.
+- [x] **Validação nas duas pontas:** validadores no formulário e schemas/regras na API. Prova: campo vazio no app, DTI repetido (409) e campo inválido no `/docs` (422); a mensagem aparece sem perder os campos.
+- [x] **Busca/filtro:** busca parcial por DTI e chip Só no estoque, feitos pela API. Prova: busca com resultado, busca sem resultado, chip combinado com busca e × para limpar; conferir os parâmetros na aba Network.
+- [x] **Feedback visual:** avisos verdes/vermelhos nas ações e estados de carregamento, erro e lista vazia. Prova: salvar, provocar uma recusa e excluir.
+
+### Roteiro da demonstração e entrega
+
+1. Entrar e criar um equipamento, por exemplo DTI `DEMO001`, com status **No Estoque**.
+2. Editar o modelo e conferir o aviso verde e a lista atualizada.
+3. Buscar `demo`, confirmar o pedido `?dti=demo` no Network e testar `xyz` (nenhum resultado).
+4. Limpar a busca com ×. Ligar **Só no estoque**, combinar com a busca e depois desligar o chip. Um equipamento **Em Uso** deve ficar fora do filtro.
+5. Tentar cadastrar o mesmo DTI para demonstrar o 409, a mensagem detalhada, o aviso vermelho e os campos preservados.
+6. Entrar com outra conta e conferir o mesmo estoque compartilhado, conforme a adaptação autorizada.
+7. Cancelar uma exclusão e depois confirmar outra; conferir o aviso verde, a atualização da lista e sair.
+8. Executar as verificações abaixo. Na entrega, usar o link do mesmo repositório nos campos de backend e frontend.
+
 ## Rotas principais
 
 | Operação | Método e caminho |
@@ -137,7 +165,7 @@ O estoque é compartilhado: usuários autenticados podem consultar e alterar os 
 | Editar equipamento | `PATCH /equipamentos/{id}` |
 | Excluir equipamento | `DELETE /equipamentos/{id}` |
 
-A listagem da API também aceita os filtros opcionais `dti` e `departamento`.
+A listagem da API aceita os filtros opcionais `dti` e `departamento` (busca parcial sem distinguir maiúsculas/minúsculas) e `status` (categoria exata). Os três podem ser combinados. O Flutter usa `dti` e `status`.
 
 ## Verificação
 
@@ -149,7 +177,7 @@ flutter test
 flutter build web
 ```
 
-Os testes usam HTTP simulado e armazenamento de sessão simulado. Conferem autenticação, listagem, detalhe, formulário, validação, cancelamento, atualização da lista, confirmação e recusas da API, além dos contratos HTTP dos repositórios. Não precisam do servidor ligado.
+Os **56 testes do Flutter** usam HTTP simulado e armazenamento de sessão simulado. Conferem autenticação, listagem, detalhe, formulário, validação, cancelamento, atualização da lista, confirmação e recusas da API, além dos contratos HTTP dos repositórios. A aula 13 acrescenta busca no Enter, resultado vazio, filtro, combinação dos parâmetros, ×, codificação de caracteres, nova tentativa e preservação dos filtros, com verificações das cores dos avisos. Não precisam do servidor ligado.
 
 Os testes do backend usam `unittest` e o cliente de teste do FastAPI. Instale a dependência de testes no ambiente e execute a partir da raiz:
 
@@ -158,4 +186,4 @@ poetry run python -m pip install httpx
 poetry run python -m unittest discover -s tests -v
 ```
 
-Esses testes usam um banco SQLite temporário em memória e não acessam nem alteram o PostgreSQL local.
+Os **13 testes da API** usam um banco SQLite temporário em memória e não acessam nem alteram o PostgreSQL local. Incluem filtros combinados, busca parcial e acesso ao estoque por outra conta sem mudar quem cadastrou.

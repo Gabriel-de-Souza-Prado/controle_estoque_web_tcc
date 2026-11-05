@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../routes.dart';
 import '../services/auth_service.dart';
+import '../widgets/aviso.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,15 +27,11 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (!mounted) return;
+      avisar(context, 'Login realizado');
       Navigator.pushReplacementNamed(context, AppRoutes.inicio);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
-      );
+      avisar(context, e.toString().replaceAll('Exception: ', ''), erro: true);
     } finally {
       if (mounted) setState(() => _carregando = false);
     }
@@ -81,7 +79,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: _carregando ? null : _fazerLogin,
                 child: _carregando
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Entrar no Sistema', style: TextStyle(fontSize: 18)),
+                    : const Text(
+                        'Entrar no Sistema',
+                        style: TextStyle(fontSize: 18),
+                      ),
               ),
             ),
             const SizedBox(height: 12),

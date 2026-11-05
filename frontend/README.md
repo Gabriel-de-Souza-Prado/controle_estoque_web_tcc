@@ -1,23 +1,30 @@
-# frontend
+# Interface Flutter Web — Controle de Estoque de TI
 
-A new Flutter project.
+Configuração da API, banco, checklist da aula 13 e roteiro da demonstração estão no [README principal](../README.md).
 
-## Getting Started
+## Executar
 
-This project is a starting point for a Flutter application.
+Com a API iniciada na porta 8000, execute nesta pasta:
 
-A few resources to get you started if this is your first Flutter project:
+```powershell
+flutter pub get
+flutter run -d edge --web-port 5000
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Verificar
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+flutter analyze
+flutter test
+flutter build web
+```
 
+## Camadas
 
-🔐 Cadastro e sessão guardada
-O cadastro chama `POST /usuarios/` pelas mesmas camadas do login e já entra com a conta nova. Quando a API recusa (e-mail repetido, campo inválido), a frase aparece na tela.
+- `screens/`: interface, campos, navegação e estados visuais.
+- `services/`: sessão, operações e tradução das falhas para a interface.
+- `repositories/`: HTTP, JSON e armazenamento local do token.
+- `models/`: dados de usuários e equipamentos.
+- `widgets/`: componentes compartilhados, proteção de rotas e avisos.
 
-O token fica no aparelho (`shared_preferences`, que no navegador é o `localStorage`), num repositório próprio, o `TokenRepository`. O `main` o restaura antes de abrir o app: se a API ainda o aceita, o F5 não derruba a sessão. O Sair apaga o token.
+A busca por DTI e o filtro de status percorrem as camadas até a API. A tela não filtra os equipamentos localmente e não recebe o token para realizar operações do estoque.

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../routes.dart';
 import '../services/auth_service.dart';
+import '../widgets/aviso.dart';
 
 class CadastroScreen extends StatefulWidget {
   const CadastroScreen({super.key});
@@ -37,10 +39,12 @@ class _CadastroScreenState extends State<CadastroScreen> {
         _carregando = false;
         _erro = e.mensagem;
       });
+      avisar(context, 'Não deu para cadastrar', erro: true);
       return;
     }
 
     if (!mounted) return;
+    avisar(context, 'Conta criada');
     Navigator.pushNamedAndRemoveUntil(
       context,
       AppRoutes.inicio,
@@ -111,7 +115,10 @@ class _CadastroScreenState extends State<CadastroScreen> {
                     onPressed: _carregando ? null : _realizarCadastro,
                     child: _carregando
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Cadastrar', style: TextStyle(fontSize: 18)),
+                        : const Text(
+                            'Cadastrar',
+                            style: TextStyle(fontSize: 18),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 8),

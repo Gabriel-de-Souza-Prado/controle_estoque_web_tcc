@@ -20,8 +20,13 @@ class EquipamentoService {
   final EquipamentoRepository repositorio;
   final AuthService auth;
 
-  Future<List<EquipamentoModel>> listar() =>
-      _comSessao((token) => repositorio.listar(token));
+  Future<List<EquipamentoModel>> listar({
+    String busca = '',
+    bool soNoEstoque = false,
+  }) => _comSessao(
+    (token) =>
+        repositorio.listar(token, busca: busca, soNoEstoque: soNoEstoque),
+  );
 
   Future<EquipamentoModel> buscar(int id) =>
       _comSessao((token) => repositorio.buscar(token, id));

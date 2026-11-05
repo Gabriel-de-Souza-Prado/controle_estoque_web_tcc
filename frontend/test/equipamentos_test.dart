@@ -66,7 +66,18 @@ class EstoqueSimulado {
         .where((s) => s.isNotEmpty)
         .toList();
     if (segmentos.length == 1 && pedido.method == 'GET') {
-      return resposta(itens, 200);
+      final busca = pedido.url.queryParameters['dti']?.toLowerCase() ?? '';
+      final status = pedido.url.queryParameters['status'];
+      return resposta(
+        itens
+            .where(
+              (item) =>
+                  (item['dti'] as String).toLowerCase().contains(busca) &&
+                  (status == null || item['status'] == status),
+            )
+            .toList(),
+        200,
+      );
     }
     if (pedido.method == 'POST') {
       if (aguardarGravacao != null) await aguardarGravacao!.future;
@@ -172,6 +183,152 @@ Future<void> responderExclusao(WidgetTester tester, String escolha) async {
 }
 
 void main() {
+  test(
+    'repository codifica acento, espaço e & e combina busca com status',
+    () async {
+      late Uri endereco;
+      final repo = EquipamentoRepository(
+        cliente: MockClient((pedido) async {
+          endereco = pedido.url;
+          expect(pedido.headers['Authorization'], 'Bearer token-teste');
+          return EstoqueSimulado.resposta([], 200);
+        }),
+      );
+      await repo.listar(
+        'token-teste',
+        busca: 'DTI São & TI',
+        soNoEstoque: true,
+      );
+      expect(endereco.queryParameters, {
+        'dti': 'DTI São & TI',
+        'status': 'No Estoque',
+      });
+      await repo.listar('token-teste');
+      expect(endereco.hasQuery, isFalse);
+    },
+  );
+
+  testWidgets('busca só pede no Enter, remove espaços e aceita parte do DTI', (
+    tester,
+  ) async {
+    final estoque = EstoqueSimulado();
+    await abrirEstoque(tester, estoque);
+    final antes = estoque.pedidos.length;
+    await tester.enterText(find.byType(TextField), '  dti001  ');
+    await tester.pump();
+    expect(estoque.pedidos.length, antes);
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(estoque.pedidos.last.url.queryParameters, {'dti': 'dti001'});
+    expect(find.text('Notebook Dell'), findsOneWidget);
+    expect(find.text('Monitor LG'), findsNothing);
+  });
+
+  testWidgets('busca vazia volta à lista e busca sem resultado explica o DTI', (
+    tester,
+  ) async {
+    final estoque = EstoqueSimulado();
+    await abrirEstoque(tester, estoque);
+    await tester.enterText(find.byType(TextField), 'xyz');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhum equipamento com "xyz" no DTI.'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '   ');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(estoque.pedidos.last.url.hasQuery, isFalse);
+    expect(find.text('Notebook Dell'), findsOneWidget);
+    expect(find.text('Monitor LG'), findsOneWidget);
+  });
+
+  testWidgets('chip filtra pela API e desligar restaura todos os status', (
+    tester,
+  ) async {
+    final estoque = EstoqueSimulado();
+    estoque.itens.last['status'] = 'Em Uso';
+    await abrirEstoque(tester, estoque);
+    await tester.tap(find.byType(FilterChip));
+    await tester.pumpAndSettle();
+    expect(estoque.pedidos.last.url.queryParameters, {'status': 'No Estoque'});
+    expect(find.text('Monitor LG'), findsNothing);
+    await tester.tap(find.byType(FilterChip));
+    await tester.pumpAndSettle();
+    expect(estoque.pedidos.last.url.hasQuery, isFalse);
+    expect(find.text('Monitor LG'), findsOneWidget);
+  });
+
+  testWidgets('busca e chip combinados; x limpa o campo e preserva o chip', (
+    tester,
+  ) async {
+    final estoque = EstoqueSimulado();
+    estoque.itens.last['status'] = 'Em Uso';
+    await abrirEstoque(tester, estoque);
+    await tester.tap(find.byType(FilterChip));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '002');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(estoque.pedidos.last.url.queryParameters, {
+      'dti': '002',
+      'status': 'No Estoque',
+    });
+    expect(
+      find.text('Nenhum equipamento no estoque com "002" no DTI.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byTooltip('Limpar busca'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '',
+    );
+    expect(estoque.pedidos.last.url.queryParameters, {'status': 'No Estoque'});
+    expect(find.text('Notebook Dell'), findsOneWidget);
+    expect(find.text('Monitor LG'), findsNothing);
+  });
+
+  testWidgets('tentar de novo preserva os parâmetros após falha da busca', (
+    tester,
+  ) async {
+    final estoque = EstoqueSimulado();
+    await abrirEstoque(tester, estoque);
+    estoque.metodoRecusado = 'GET';
+    await tester.enterText(find.byType(TextField), '001');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Operação recusada pela API.'), findsOneWidget);
+    estoque.metodoRecusado = null;
+    await tester.tap(find.text('Tentar de novo'));
+    await tester.pumpAndSettle();
+    expect(estoque.pedidos.last.url.queryParameters, {'dti': '001'});
+    expect(find.text('Notebook Dell'), findsOneWidget);
+  });
+
+  testWidgets('salvar preserva busca e filtro, e o aviso verde chega à lista', (
+    tester,
+  ) async {
+    final estoque = EstoqueSimulado();
+    await abrirEstoque(tester, estoque);
+    await tester.enterText(find.byType(TextField), '003');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FilterChip));
+    await tester.pumpAndSettle();
+    await preencher(tester);
+    await salvar(tester);
+    expect(estoque.pedidos.last.url.queryParameters, {
+      'dti': '003',
+      'status': 'No Estoque',
+    });
+    expect(find.text('Teclado USB'), findsOneWidget);
+    expect(find.text('Notebook Dell'), findsNothing);
+    expect(find.text('Equipamento salvo'), findsOneWidget);
+    expect(
+      tester.widget<SnackBar>(find.byType(SnackBar)).backgroundColor,
+      Colors.green,
+    );
+  });
+
   test('listar envia o token e converte JSON em modelos', () async {
     final estoque = EstoqueSimulado();
     final lista = await EquipamentoRepository(cliente: estoque.cliente)
@@ -411,6 +568,11 @@ void main() {
     await preencher(tester, dti: 'DTI001');
     await salvar(tester);
     expect(find.text('Já existe um equipamento com este DTI.'), findsOneWidget);
+    expect(find.text('Não deu para salvar'), findsOneWidget);
+    expect(
+      tester.widget<SnackBar>(find.byType(SnackBar)).backgroundColor,
+      Colors.red,
+    );
     expect(find.byType(FormularioScreen), findsOneWidget);
     expect(
       tester.widget<TextFormField>(campo('Modelo')).controller!.text,
@@ -490,6 +652,11 @@ void main() {
       expect(find.text('Notebook Dell'), findsNothing);
       expect(find.text('Monitor LG'), findsOneWidget);
       expect(estoque.pedidos.last.method, 'GET');
+      expect(find.text('Equipamento excluído'), findsOneWidget);
+      expect(
+        tester.widget<SnackBar>(find.byType(SnackBar)).backgroundColor,
+        Colors.green,
+      );
     },
   );
 
@@ -504,6 +671,11 @@ void main() {
     expect(find.byType(EquipamentoScreen), findsOneWidget);
     expect(find.text('Operação recusada pela API.'), findsOneWidget);
     expect(estoque.itens, hasLength(2));
+    expect(find.text('Não deu para excluir'), findsOneWidget);
+    expect(
+      tester.widget<SnackBar>(find.byType(SnackBar)).backgroundColor,
+      Colors.red,
+    );
   });
 
   testWidgets('F5 no formulário mostra a lista', (tester) async {

@@ -12,9 +12,21 @@ class EquipamentoRepository {
 
   final http.Client cliente;
 
-  Future<List<EquipamentoModel>> listar(String token) async {
+  Future<List<EquipamentoModel>> listar(
+    String token, {
+    String busca = '',
+    bool soNoEstoque = false,
+  }) async {
+    var endereco = Uri.parse('$enderecoDaApi/equipamentos/');
+    final filtros = {
+      if (busca.isNotEmpty) 'dti': busca,
+      if (soNoEstoque) 'status': 'No Estoque',
+    };
+    if (filtros.isNotEmpty) {
+      endereco = endereco.replace(queryParameters: filtros);
+    }
     final resposta = await cliente.get(
-      Uri.parse('$enderecoDaApi/equipamentos/'),
+      endereco,
       headers: {'Authorization': 'Bearer $token'},
     );
 

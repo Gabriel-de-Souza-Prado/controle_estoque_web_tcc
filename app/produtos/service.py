@@ -11,9 +11,9 @@ def validar_situacao(status: str, observacao: str | None):
     if status == "Em Manutenção" and not (observacao or "").strip():
         raise HTTPException(status_code=400, detail="Para manutenção, 'observação' é obrigatório.")
 
-def listar_equipamentos(db: Session, dti: str | None = None, departamento: str | None = None):
+def listar_equipamentos(db: Session, dti: str | None = None, departamento: str | None = None, status: str | None = None):
     # Todos veem tudo, sem filtrar por dono_id
-    return repository.listar_equipamentos(db, dti, departamento)
+    return repository.listar_equipamentos(db, dti, departamento, status)
 
 def buscar_equipamento(db: Session, equipamento_id: int):
     equipamento = repository.buscar_equipamento_por_id(db, equipamento_id)
