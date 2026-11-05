@@ -133,6 +133,45 @@ class EquipamentosTest(unittest.TestCase):
         filtrados = self.client.get("/equipamentos/?departamento=fin&dti=AAA", headers=self.headers).json()
         self.assertEqual([item["dti"] for item in filtrados], ["AAA001"])
 
+    def test_busca_parcial_sem_distinguir_maiusculas_e_sem_resultados(self):
+        self.criar(dti="Patrimonio-001")
+        encontrados = self.client.get("/equipamentos/", params={"dti": "MONIO-0"}, headers=self.headers)
+        self.assertEqual(encontrados.status_code, 200)
+        self.assertEqual([item["dti"] for item in encontrados.json()], ["Patrimonio-001"])
+        vazios = self.client.get("/equipamentos/", params={"dti": "xyz"}, headers=self.headers)
+        self.assertEqual(vazios.status_code, 200)
+        self.assertEqual(vazios.json(), [])
+        self.assertEqual(len(self.client.get("/equipamentos/", params={"dti": ""}, headers=self.headers).json()), 1)
+
+    def test_status_combina_com_busca_e_departamento(self):
+        self.assertEqual(self.criar(dti="DTI001", departamento="Suporte").status_code, 201)
+        self.assertEqual(self.criar(dti="DTI002", status="Em Uso", departamento="Suporte").status_code, 201)
+        self.criar(dti="DTI003", departamento="Compras")
+        self.criar(dti="OUTRO004", departamento="Suporte")
+        filtrados = self.client.get("/equipamentos/", params={
+            "dti": "dti", "status": "No Estoque", "departamento": "sup",
+        }, headers=self.headers)
+        self.assertEqual(filtrados.status_code, 200)
+        self.assertEqual([item["dti"] for item in filtrados.json()], ["DTI001"])
+        so_status = self.client.get("/equipamentos/", params={"status": "No Estoque"}, headers=self.headers).json()
+        self.assertEqual(len(so_status), 3)
+
+    def test_estoque_compartilhado_preserva_quem_cadastrou(self):
+        with self.sessoes() as db:
+            db.add(Usuario(id=2, nome="Bia", email="bia@estoque.com", senha_hash="nao-usado"))
+            db.commit()
+        item = self.criar().json()
+        outra_conta = {"Authorization": f"Bearer {criar_token(2)}"}
+        lista = self.client.get("/equipamentos/", headers=outra_conta).json()
+        self.assertEqual(lista[0]["id"], item["id"])
+        self.assertEqual(lista[0]["dono_id"], 1)
+        detalhe = self.client.get(f"/equipamentos/{item['id']}", headers=outra_conta)
+        self.assertEqual(detalhe.status_code, 200)
+        editado = self.client.patch(f"/equipamentos/{item['id']}", json={"modelo": "Modelo atualizado"}, headers=outra_conta)
+        self.assertEqual(editado.status_code, 200)
+        self.assertEqual(editado.json()["dono_id"], 1)
+        self.assertEqual(self.client.delete(f"/equipamentos/{item['id']}", headers=outra_conta).status_code, 204)
+
 
 if __name__ == "__main__":
     unittest.main()

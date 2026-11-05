@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from . import models
 
-def listar_equipamentos(db: Session, dti: str | None = None, departamento: str | None = None):
+def listar_equipamentos(db: Session, dti: str | None = None, departamento: str | None = None, status: str | None = None):
     consulta = db.query(models.Equipamento)
     
     # Filtros opcionais montados aos poucos (igual o professor fez)
@@ -10,6 +10,9 @@ def listar_equipamentos(db: Session, dti: str | None = None, departamento: str |
     if departamento:
         consulta = consulta.filter(models.Equipamento.departamento.ilike(f"%{departamento}%"))
         
+    if status:
+        consulta = consulta.filter(models.Equipamento.status == status)
+
     return consulta.order_by(models.Equipamento.modelo, models.Equipamento.dti).all()
 
 def buscar_equipamento_por_id(db: Session, equipamento_id: int):

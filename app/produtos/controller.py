@@ -12,10 +12,11 @@ router = APIRouter(prefix="/equipamentos", tags=["Equipamentos"])
 def listar(
     dti: str | None = None,
     departamento: str | None = None,
+    status: str | None = None,
     db: Session = Depends(get_db),
     usuario_logado: Usuario = Depends(get_current_user)
 ):
-    return service.listar_equipamentos(db, dti, departamento)
+    return service.listar_equipamentos(db, dti, departamento, status)
 
 @router.post("/", response_model=schemas.EquipamentoPublico, status_code=201)
 def criar(

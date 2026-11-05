@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/equipamento_model.dart';
 import '../services/equipamento_service.dart';
+import '../widgets/aviso.dart';
 import 'produtos_screen.dart';
 
 /// Sem equipamento, cria. Com equipamento, edita os mesmos campos.
@@ -81,10 +82,12 @@ class _FormularioScreenState extends State<FormularioScreen> {
         salvando = false;
         erro = e.mensagem;
       });
+      avisar(context, 'Não deu para salvar', erro: true);
       return;
     }
     if (!mounted) return;
     // Quem abriu esta tela recebe true e busca os dados atuais na API.
+    avisar(context, 'Equipamento salvo');
     Navigator.pop(context, true);
   }
 

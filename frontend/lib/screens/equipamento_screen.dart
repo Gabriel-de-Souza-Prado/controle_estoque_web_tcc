@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/equipamento_model.dart';
 import '../routes.dart';
 import '../services/equipamento_service.dart';
+import '../widgets/aviso.dart';
 import 'produtos_screen.dart';
 
 class EquipamentoScreen extends StatefulWidget {
@@ -63,9 +64,11 @@ class _EquipamentoScreenState extends State<EquipamentoScreen> {
         excluindo = false;
         erro = e.mensagem;
       });
+      avisar(context, 'Não deu para excluir', erro: true);
       return;
     }
     if (!mounted) return;
+    avisar(context, 'Equipamento excluído');
     Navigator.pop(context, true);
   }
 
