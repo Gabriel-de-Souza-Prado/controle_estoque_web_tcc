@@ -8,7 +8,7 @@ arquivo mora em app/, ao lado do database.py, e nao dentro de usuarios/:
 - o TOKEN e' o cracha' que o login entrega. Qualquer um le o que esta'
   escrito nele; ninguem consegue falsificar, porque ele vem assinado com a
   SECRET_KEY -- que so' o servidor conhece;
-- o get_current_user e' o porteiro. A rota que o pede so' roda com um
+- obter_usuario_id confere o token; dependencias.get_current_user e' o porteiro. A rota que o pede so' roda com um
   cracha' valido na mao.
 """
 import os
@@ -17,12 +17,8 @@ from datetime import datetime, timedelta, timezone
 import bcrypt
 import jwt
 from dotenv import load_dotenv
-from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
 
-from .database import get_db
-from .usuarios import repository as usuarios_repository
 from .usuarios.erros import CredenciaisInvalidas
 
 load_dotenv()
@@ -54,18 +50,13 @@ def criar_token(usuario_id: int) -> str:
     )
 
 
-def get_current_user(
-    token: str = Depends(esquema_oauth),
-    db: Session = Depends(get_db),
-):
-    """O porteiro. Le o cracha', confere a assinatura e busca quem e'."""
+def obter_usuario_id(token: str) -> int:
+    """Confere assinatura, validade e identificação antes de procurar a conta."""
     try:
-        dados = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITMO])
-    except jwt.PyJWTError:
-        raise CredenciaisInvalidas("Token invalido ou vencido")
-
-    usuario = usuarios_repository.buscar(db, int(dados["sub"]))
-    if usuario is None:
-        raise CredenciaisInvalidas("O usuario deste token nao existe mais")
-    return usuario
-
+        dados = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITMO], options={"require": ["sub", "exp"]})
+        usuario_id = int(dados["sub"])
+        if usuario_id <= 0:
+            raise ValueError("Identificação inválida")
+        return usuario_id
+    except (jwt.PyJWTError, ValueError, TypeError, KeyError):
+        raise CredenciaisInvalidas("Token invalido ou vencido") from None

@@ -1,52 +1,57 @@
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
-from ..database import get_db
+"""Contratos HTTP: autentica, recebe dados e delega ao service."""
+from fastapi import APIRouter, Depends
 
-from ..seguranca import get_current_user 
-from ..usuarios.models import Usuario 
-from . import service, schemas
+from ..dependencias import get_current_user, obter_equipamento_service
+from ..usuarios.models import Usuario
+from . import schemas
+from .service import EquipamentoService
 
 router = APIRouter(prefix="/equipamentos", tags=["Equipamentos"])
+
 
 @router.get("/", response_model=list[schemas.EquipamentoPublico])
 def listar(
     dti: str | None = None,
     departamento: str | None = None,
     status: str | None = None,
-    db: Session = Depends(get_db),
-    usuario_logado: Usuario = Depends(get_current_user)
+    servico: EquipamentoService = Depends(obter_equipamento_service),
+    usuario_logado: Usuario = Depends(get_current_user),
 ):
-    return service.listar_equipamentos(db, dti, departamento, status)
+    return servico.listar(dti, departamento, status)
+
 
 @router.post("/", response_model=schemas.EquipamentoPublico, status_code=201)
 def criar(
-    dados: schemas.EquipamentoCriar, 
-    db: Session = Depends(get_db),
-    usuario_logado: Usuario = Depends(get_current_user)
+    dados: schemas.EquipamentoCriar,
+    servico: EquipamentoService = Depends(obter_equipamento_service),
+    usuario_logado: Usuario = Depends(get_current_user),
 ):
-    return service.criar_equipamento(db, usuario_logado, dados)
+    return servico.criar(usuario_logado.id, dados)
+
 
 @router.get("/{equipamento_id}", response_model=schemas.EquipamentoPublico)
 def buscar(
-    equipamento_id: int, 
-    db: Session = Depends(get_db),
-    usuario_logado: Usuario = Depends(get_current_user)
+    equipamento_id: int,
+    servico: EquipamentoService = Depends(obter_equipamento_service),
+    usuario_logado: Usuario = Depends(get_current_user),
 ):
-    return service.buscar_equipamento(db, equipamento_id)
+    return servico.buscar(equipamento_id)
+
 
 @router.patch("/{equipamento_id}", response_model=schemas.EquipamentoPublico)
 def atualizar(
     equipamento_id: int,
     dados: schemas.EquipamentoAtualizar,
-    db: Session = Depends(get_db),
-    usuario_logado: Usuario = Depends(get_current_user)
+    servico: EquipamentoService = Depends(obter_equipamento_service),
+    usuario_logado: Usuario = Depends(get_current_user),
 ):
-    return service.atualizar_equipamento(db, equipamento_id, dados)
+    return servico.atualizar(equipamento_id, dados)
+
 
 @router.delete("/{equipamento_id}", status_code=204)
 def apagar(
     equipamento_id: int,
-    db: Session = Depends(get_db),
-    usuario_logado: Usuario = Depends(get_current_user)
+    servico: EquipamentoService = Depends(obter_equipamento_service),
+    usuario_logado: Usuario = Depends(get_current_user),
 ):
-    service.deletar_equipamento(db, equipamento_id)
+    servico.excluir(equipamento_id)

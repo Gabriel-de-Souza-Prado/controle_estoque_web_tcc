@@ -1,41 +1,49 @@
+"""Persistência dos equipamentos: só esta camada usa a sessão de banco."""
+from fastapi import Depends
 from sqlalchemy.orm import Session
-from . import models
 
-def listar_equipamentos(db: Session, dti: str | None = None, departamento: str | None = None, status: str | None = None):
-    consulta = db.query(models.Equipamento)
-    
-    # Filtros opcionais montados aos poucos (igual o professor fez)
-    if dti:
-        consulta = consulta.filter(models.Equipamento.dti.ilike(f"%{dti}%"))
-    if departamento:
-        consulta = consulta.filter(models.Equipamento.departamento.ilike(f"%{departamento}%"))
-        
-    if status:
-        consulta = consulta.filter(models.Equipamento.status == status)
+from ..database import get_db
+from .models import Equipamento
 
-    return consulta.order_by(models.Equipamento.modelo, models.Equipamento.dti).all()
 
-def buscar_equipamento_por_id(db: Session, equipamento_id: int):
-    return db.query(models.Equipamento).filter(models.Equipamento.id == equipamento_id).first()
+class EquipamentoRepository:
+    def __init__(self, db: Session):
+        self.db = db
 
-def buscar_equipamento_por_dti(db: Session, dti: str):
-    return db.query(models.Equipamento).filter(models.Equipamento.dti == dti).first()
+    def listar(self, dti=None, departamento=None, status=None):
+        consulta = self.db.query(Equipamento)
+        if dti:
+            consulta = consulta.filter(Equipamento.dti.ilike(f"%{dti}%"))
+        if departamento:
+            consulta = consulta.filter(Equipamento.departamento.ilike(f"%{departamento}%"))
+        if status:
+            consulta = consulta.filter(Equipamento.status == status)
+        return consulta.order_by(Equipamento.modelo, Equipamento.dti).all()
 
-def criar_equipamento(db: Session, dados: dict):
-    # Recebe um dict agora, pois o service vai anexar o dono_id
-    novo_equipamento = models.Equipamento(**dados)
-    db.add(novo_equipamento)
-    db.commit()
-    db.refresh(novo_equipamento)
-    return novo_equipamento
+    def buscar(self, equipamento_id: int):
+        return self.db.query(Equipamento).filter(Equipamento.id == equipamento_id).first()
 
-def atualizar_equipamento(db: Session, equipamento: models.Equipamento, mudancas: dict):
-    for chave, valor in mudancas.items():
-        setattr(equipamento, chave, valor)
-    db.commit()
-    db.refresh(equipamento)
-    return equipamento
+    def buscar_por_dti(self, dti: str):
+        return self.db.query(Equipamento).filter(Equipamento.dti == dti).first()
 
-def deletar_equipamento(db: Session, equipamento: models.Equipamento):
-    db.delete(equipamento)
-    db.commit()
+    def criar(self, dados: dict):
+        equipamento = Equipamento(**dados)
+        self.db.add(equipamento)
+        self.db.commit()
+        self.db.refresh(equipamento)
+        return equipamento
+
+    def atualizar(self, equipamento: Equipamento, mudancas: dict):
+        for campo, valor in mudancas.items():
+            setattr(equipamento, campo, valor)
+        self.db.commit()
+        self.db.refresh(equipamento)
+        return equipamento
+
+    def excluir(self, equipamento: Equipamento):
+        self.db.delete(equipamento)
+        self.db.commit()
+
+
+def obter_equipamento_repository(db: Session = Depends(get_db)):
+    return EquipamentoRepository(db)

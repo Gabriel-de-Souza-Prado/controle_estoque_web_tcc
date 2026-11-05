@@ -9,9 +9,9 @@ O projeto usa arquitetura em camadas, com Service Layer e Repository:
 - **Frontend:** `screens/` → `services/` → `repositories/` → API.
 - **Backend:** `controller.py` → `service.py` → `repository.py` → banco.
 - **Models:** representam os dados; no backend, `schemas.py` valida os contratos de entrada e saída e `models.py` mapeia as tabelas.
-- **Composição:** `main.dart` conecta os repositórios aos serviços com Provider; `main.py` registra as rotas e os tratamentos de erro da API.
+- **Composição:** `main.dart` conecta os repositórios aos serviços com Provider; `dependencias.py` conecta repositories, services e autenticação no backend; `main.py` registra rotas e tratamentos HTTP dos erros de negócio.
 
-As telas chamam os serviços. Apenas os repositórios do Flutter montam os pedidos HTTP e convertem JSON. O `EquipamentoService` obtém o token no `AuthService`, sem expô-lo às telas de equipamentos. No backend, os controllers recebem os pedidos, os serviços aplicam as regras e os repositórios consultam e gravam no banco.
+As telas chamam os serviços. Apenas os repositórios do Flutter montam os pedidos HTTP e convertem JSON. O `EquipamentoService` obtém o token no `AuthService`, sem expô-lo às telas de equipamentos. No backend, os controllers recebem os pedidos e um service por injeção de dependência. Os serviços aplicam as regras e recebem repositories, sem sessão de banco ou HTTP. Somente os repositories usam a sessão para consultar e gravar. A rota de saúde `/` apenas informa que a API está em execução.
 
 ## Requisitos
 
@@ -37,12 +37,12 @@ Em outro terminal, dentro de `frontend/`:
 flutter run -d edge --web-port 5000
 ```
 
-Ambiente local validado com Python **3.14.8** e Flutter **3.47.6** (Dart **3.13.5**). As dependências Python foram instaladas na `.venv` dentro dos intervalos de `pyproject.toml`, com `httpx` para os testes. Para reproduzir as versões exatas de `poetry.lock`, use `poetry install --no-root`; o lock original foi preservado. O `.env` e a `.venv` são locais e não acompanham o repositório.
+Ambiente local validado com Python **3.14.8** e Flutter **3.47.6** (Dart **3.13.5**). As dependências Python foram instaladas na `.venv` conforme `poetry.lock`. O grupo `dev` inclui `pytest` e `httpx`; para reproduzir o ambiente, use `poetry install --no-root`. O lock foi atualizado para incluir as ferramentas de teste da aula 14. O `.env` e a `.venv` são locais e não acompanham o repositório.
 
 Para verificar este ambiente já preparado, na raiz:
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv\Scripts\poetry.exe run pytest
 ```
 
 ## Configuração local
@@ -167,23 +167,56 @@ O chip **Só no estoque** envia `status=No Estoque`. Ele combina com a busca: po
 
 A listagem da API aceita os filtros opcionais `dti` e `departamento` (busca parcial sem distinguir maiúsculas/minúsculas) e `status` (categoria exata). Os três podem ser combinados. O Flutter usa `dti` e `status`.
 
-## Verificação
+## Testes
+
+Os testes rodam sem uvicorn, navegador, PostgreSQL ou `.env`. As dependências de teste estão no grupo `dev` do Poetry.
+
+Na raiz (o backend deste repositório fica aqui, não em uma pasta `backend/`):
+
+```powershell
+poetry install --no-root
+poetry run pytest
+```
+
+Nesta máquina o Poetry está na `.venv`. Sem ativar o ambiente, os comandos equivalentes são:
+
+```powershell
+.\.venv\Scripts\poetry.exe install --no-root
+.\.venv\Scripts\poetry.exe run pytest
+```
+
+Em `frontend/`:
+
+```powershell
+flutter pub get
+flutter test
+```
+
+Para conferir apenas os novos arquivos da aula 14:
+
+```powershell
+# Na raiz:
+poetry run pytest tests/test_endpoints.py
+# Em frontend/:
+flutter test test/formulario_test.dart
+flutter test test/lista_test.dart
+```
+
+O backend tem **28 testes**: os 13 testes anteriores, que o pytest também reconhece, e 15 casos de endpoint da aula 14. A fixture `cliente`, em `conftest.py`, cria um SQLite em memória por teste e substitui a conexão da API. Os testes novos criam a conta e fazem login pelas rotas HTTP antes das operações; cobrem busca, CRUD, recusas, dono do token e estoque compartilhado. O PostgreSQL local não é aberto.
+
+O Flutter tem **60 testes**, com HTTP e armazenamento de sessão simulados. `formulario_test.dart` verifica validação sem API; `lista_test.dart` verifica os dados recebidos e a lista vazia; os testes anteriores cobrem autenticação, CRUD, busca/filtro, navegação, avisos, recusas e contratos HTTP.
+
+As duas pontas foram vistas falhando com uma regra temporariamente quebrada e passando após a restauração. Veja a [evidência e os detalhes da aula 14](docs/aula14.md).
+
+## Análise e compilação do frontend
 
 Dentro de `frontend/`:
 
 ```powershell
 flutter analyze
-flutter test
 flutter build web
 ```
 
-Os **56 testes do Flutter** usam HTTP simulado e armazenamento de sessão simulado. Conferem autenticação, listagem, detalhe, formulário, validação, cancelamento, atualização da lista, confirmação e recusas da API, além dos contratos HTTP dos repositórios. A aula 13 acrescenta busca no Enter, resultado vazio, filtro, combinação dos parâmetros, ×, codificação de caracteres, nova tentativa e preservação dos filtros, com verificações das cores dos avisos. Não precisam do servidor ligado.
+## Reta final e nuvem
 
-Os testes do backend usam `unittest` e o cliente de teste do FastAPI. Instale a dependência de testes no ambiente e execute a partir da raiz:
-
-```powershell
-poetry run python -m pip install httpx
-poetry run python -m unittest discover -s tests -v
-```
-
-Os **13 testes da API** usam um banco SQLite temporário em memória e não acessam nem alteram o PostgreSQL local. Incluem filtros combinados, busca parcial e acesso ao estoque por outra conta sem mudar quem cadastrou.
+O [plano da aula 14](docs/aula14.md) registra o cronograma, a conferência dos 12 critérios da rubrica, a prova dos testes e os conceitos de Docker. Publicação, endereços públicos e Dockerfile ficam para a prática do encontro 15. Reserva da apresentação e demonstração ainda estão pendentes. O histórico atual tem commits em três dias diferentes; a rubrica pede quatro ou mais.

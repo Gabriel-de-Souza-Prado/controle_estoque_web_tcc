@@ -1,54 +1,48 @@
-from sqlalchemy.orm import Session
-from fastapi import HTTPException
-from . import repository, schemas
-from ..usuarios.models import Usuario
+"""Regras do estoque. Recebe um repositório, nunca uma sessão ou pedido HTTP."""
+from .erros import DtiJaCadastrado, EquipamentoNaoEncontrado, SituacaoInvalida
+from .repository import EquipamentoRepository
+from .schemas import EquipamentoAtualizar, EquipamentoCriar
 
 
 def validar_situacao(status: str, observacao: str | None):
-    status_permitidos = ["Em Uso", "No Estoque", "Em Manutenção", "Descartado"]
-    if status not in status_permitidos:
-        raise HTTPException(status_code=400, detail=f"Status inválido. Escolha entre: {', '.join(status_permitidos)}")
+    permitidos = ["Em Uso", "No Estoque", "Em Manutenção", "Descartado"]
+    if status not in permitidos:
+        raise SituacaoInvalida(f"Status inválido. Escolha entre: {', '.join(permitidos)}")
     if status == "Em Manutenção" and not (observacao or "").strip():
-        raise HTTPException(status_code=400, detail="Para manutenção, 'observação' é obrigatório.")
+        raise SituacaoInvalida("Para manutenção, 'observação' é obrigatório.")
 
-def listar_equipamentos(db: Session, dti: str | None = None, departamento: str | None = None, status: str | None = None):
-    # Todos veem tudo, sem filtrar por dono_id
-    return repository.listar_equipamentos(db, dti, departamento, status)
 
-def buscar_equipamento(db: Session, equipamento_id: int):
-    equipamento = repository.buscar_equipamento_por_id(db, equipamento_id)
-    if not equipamento:
-        raise HTTPException(status_code=404, detail="Equipamento não encontrado")
-    return equipamento
+class EquipamentoService:
+    def __init__(self, repositorio: EquipamentoRepository):
+        self.repositorio = repositorio
 
-def criar_equipamento(db: Session, usuario: Usuario, dados: schemas.EquipamentoCriar):
-    if repository.buscar_equipamento_por_dti(db, dados.dti):
-        raise HTTPException(status_code=409, detail=f"Já existe um equipamento com o DTI {dados.dti}.")
-    
-    validar_situacao(dados.status, dados.observacao)
+    def listar(self, dti=None, departamento=None, status=None):
+        # O estoque é compartilhado; dono_id identifica quem cadastrou.
+        return self.repositorio.listar(dti, departamento, status)
 
-    # Converte para dicionário e vincula o dono!
-    dados_dit = dados.model_dump()
-    dados_dit["dono_id"] = usuario.id
-    
-    return repository.criar_equipamento(db, dados_dit)
+    def buscar(self, equipamento_id: int):
+        equipamento = self.repositorio.buscar(equipamento_id)
+        if equipamento is None:
+            raise EquipamentoNaoEncontrado("Equipamento não encontrado")
+        return equipamento
 
-def atualizar_equipamento(db: Session, equipamento_id: int, dados: schemas.EquipamentoAtualizar):
-    equipamento = buscar_equipamento(db, equipamento_id)
-    
-    if dados.dti and dados.dti != equipamento.dti:
-        if repository.buscar_equipamento_por_dti(db, dados.dti):
-            raise HTTPException(status_code=409, detail="Já existe outro equipamento com este DTI.")
+    def criar(self, usuario_id: int, dados: EquipamentoCriar):
+        if self.repositorio.buscar_por_dti(dados.dti):
+            raise DtiJaCadastrado(f"Já existe um equipamento com o DTI {dados.dti}.")
+        validar_situacao(dados.status, dados.observacao)
+        return self.repositorio.criar({**dados.model_dump(), "dono_id": usuario_id})
 
-    mudancas = dados.model_dump(exclude_unset=True)
-    # O PATCH é parcial: validar o resultado impede contornar a regra enviando
-    # só o status, ou apagando só a observação de um equipamento em manutenção.
-    validar_situacao(
-        mudancas.get("status", equipamento.status),
-        mudancas.get("observacao", equipamento.observacao),
-    )
-    return repository.atualizar_equipamento(db, equipamento, mudancas)
+    def atualizar(self, equipamento_id: int, dados: EquipamentoAtualizar):
+        equipamento = self.buscar(equipamento_id)
+        if dados.dti and dados.dti != equipamento.dti:
+            if self.repositorio.buscar_por_dti(dados.dti):
+                raise DtiJaCadastrado("Já existe outro equipamento com este DTI.")
+        mudancas = dados.model_dump(exclude_unset=True)
+        validar_situacao(
+            mudancas.get("status", equipamento.status),
+            mudancas.get("observacao", equipamento.observacao),
+        )
+        return self.repositorio.atualizar(equipamento, mudancas)
 
-def deletar_equipamento(db: Session, equipamento_id: int):
-    equipamento = buscar_equipamento(db, equipamento_id)
-    repository.deletar_equipamento(db, equipamento)
+    def excluir(self, equipamento_id: int):
+        self.repositorio.excluir(self.buscar(equipamento_id))
