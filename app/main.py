@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware # <-- IMPORTANTE
 from fastapi.responses import JSONResponse
-from app.database import Base, engine
+from app.produtos.erros import DtiJaCadastrado, EquipamentoNaoEncontrado, SituacaoInvalida
 from app.usuarios.erros import CredenciaisInvalidas, EmailJaCadastrado
 import uvicorn
 
@@ -19,6 +19,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(EquipamentoNaoEncontrado)
+def equipamento_nao_encontrado(request: Request, erro: EquipamentoNaoEncontrado):
+    return JSONResponse(status_code=404, content={"detail": str(erro)})
+
+
+@app.exception_handler(DtiJaCadastrado)
+def dti_ja_cadastrado(request: Request, erro: DtiJaCadastrado):
+    return JSONResponse(status_code=409, content={"detail": str(erro)})
+
+
+@app.exception_handler(SituacaoInvalida)
+def situacao_invalida(request: Request, erro: SituacaoInvalida):
+    return JSONResponse(status_code=400, content={"detail": str(erro)})
 
 # Traduz os erros do dominio (usuarios/erros.py) para HTTP. Sem isto, eles
 # viram 500 -- e o app nao consegue distinguir "e-mail repetido" (409) de
