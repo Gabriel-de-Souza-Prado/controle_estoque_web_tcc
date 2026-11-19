@@ -2,6 +2,14 @@
 
 A interface Flutter será um Static Site no Render. A API FastAPI será um Web Service Docker no Render. O banco PostgreSQL será criado em um projeto próprio do Neon, chamado `progweb3-estoque`.
 
+A publicação atual usa o workspace **WEB III - ESTOQUE** e os seguintes endereços:
+
+| Serviço | Endereço |
+| --- | --- |
+| App | https://progweb3-estoque-app.onrender.com |
+| API | https://progweb3-estoque-api.onrender.com/docs |
+| Banco | Projeto `progweb3-estoque` no Neon, banco `controle_estoque`, branch `main` |
+
 As configurações abaixo correspondem a este repositório, que tem `Dockerfile`, `pyproject.toml`, `app/` e `alembic/` na raiz e a interface em `frontend/`.
 
 **1. Enviar a versão atualizada ao GitHub**
@@ -68,7 +76,7 @@ Mantenha o usuário, a senha, o host, o banco e os parâmetros fornecidos pelo N
 
 **3. Criar a API no Render**
 
-Use um workspace dedicado ao Web III. No painel do Render, abra o menu de workspaces no canto superior esquerdo, escolha **+ New Workspace**, informe **Web III — Estoque** e selecione **Hobby**. A franquia de uso pertence ao workspace. Os serviços do estoque serão criados nesse novo espaço. [Workspaces do Render](https://render.com/docs/team-members)
+Use um workspace dedicado ao Web III. No painel do Render, abra o menu de workspaces no canto superior esquerdo, escolha **+ New Workspace**, informe **WEB III - ESTOQUE** e selecione **Hobby**. A franquia de uso pertence ao workspace. Os serviços do estoque serão criados nesse novo espaço. [Workspaces do Render](https://render.com/docs/team-members)
 
 Abra o [painel do Render](https://dashboard.render.com/) e escolha **New → Web Service**. Conecte o repositório do estoque usando **Git Provider**. Se o repositório for público, a opção **Public Git Repository** também permite informar seu endereço.
 
@@ -84,7 +92,7 @@ Use as seguintes configurações:
 | Dockerfile Path | `./Dockerfile` |
 | Docker Build Context Directory, se aparecer | `.` |
 | Instance Type | Free |
-| Health Check Path, em Advanced | `/` |
+| Health Check Path, em Advanced | Em branco, com a verificação TCP padrão |
 
 Em **Environment Variables**, configure:
 
@@ -107,13 +115,13 @@ No Render, escolha **New → Static Site**, selecione o mesmo repositório e pre
 | --- | --- |
 | Name | `progweb3-estoque-app`, ou um nome disponível |
 | Branch | `main` |
-| Root Directory | `frontend` |
-| Publish Directory | `build/web` |
+| Root Directory | Em branco |
+| Publish Directory | `frontend/build/web` |
 
 No campo **Build Command**, cole a linha inteira:
 
 ```bash
-git clone --branch 3.47.6 --depth 1 https://github.com/flutter/flutter.git sdk && sdk/bin/flutter build web --dart-define="API_URL=${API_URL:?Defina API_URL no Render}"
+cd frontend && git clone --branch 3.47.6 --depth 1 https://github.com/flutter/flutter.git sdk && sdk/bin/flutter build web --dart-define="API_URL=${API_URL:?Defina API_URL no Render}"
 ```
 
 Em **Environment Variables**, crie `API_URL` com a origem HTTPS real da sua API, sem barra final. Exemplo ilustrativo:
@@ -131,7 +139,7 @@ Clique em **Deploy Static Site**, acompanhe o build e copie o endereço público
 Abra o serviço da API no Render, entre em **Environment → Edit** e adicione:
 
 ```text
-ENDERECO_DO_APP=https://ENDERECO-REAL-DO-APP.onrender.com
+ENDERECO_DO_APP=https://progweb3-estoque-app.onrender.com
 ```
 
 Use a origem HTTPS real do Static Site, sem caminho ou barra final. Salve com a opção que faz o deploy da API novamente. Aguarde a API voltar a ficar ativa.
@@ -153,13 +161,13 @@ Abra o endereço do Static Site em uma janela anônima e execute este roteiro:
 
 Os registros criados no SQLite local pertencem ao banco da sua máquina. O novo banco do Neon começa com as tabelas criadas pelas migrações e recebe os cadastros feitos pela aplicação publicada.
 
-Depois de confirmar o funcionamento, substitua o texto pendente da seção **No ar** do README por seus dois endereços reais:
+A seção **No ar** do README registra os endereços publicados. Atualize-a se os endereços mudarem:
 
 ```markdown
 ### No ar
 
-- App — https://ENDERECO-REAL-DO-APP.onrender.com
-- API — https://ENDERECO-REAL-DA-API.onrender.com/docs
+- App — https://progweb3-estoque-app.onrender.com
+- API — https://progweb3-estoque-api.onrender.com/docs
 
 O banco PostgreSQL deste projeto é hospedado no Neon.
 ```
@@ -206,7 +214,7 @@ Em um ZIP extraído em outro local, entre na pasta correspondente, prepare o `.e
 | `could not translate host name` ou timeout | Confira o host completo e o estado do compute no Neon. |
 | `DATABASE_URL` ou `SECRET_KEY` ausente | Confira as variáveis no Web Service da API. |
 | Dockerfile ausente | Na API, Root Directory fica em branco e Dockerfile Path usa `./Dockerfile`. |
-| `pubspec.yaml` ausente | No Static Site, Root Directory usa `frontend`. |
+| `pubspec.yaml` ausente | No Static Site, Root Directory fica em branco e o Build Command começa com `cd frontend &&`. |
 | `Defina API_URL no Render` | Defina `API_URL` no Static Site e faça um novo build. |
 | Login falha e o console mostra CORS | Confira `ENDERECO_DO_APP` na API e faça seu deploy novamente. |
 | Cadastro retorna 422 | Leia a mensagem de validação. DTI e departamento exigem pelo menos três caracteres. |

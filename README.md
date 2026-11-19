@@ -159,20 +159,20 @@ flutter build web
 
 A API é publicada como Web Service Docker no Render e o Flutter como Static Site. O PostgreSQL fica em um projeto próprio do Neon. O [roteiro completo de publicação](docs/publicacao-render-neon.md) traz os campos de cada tela, os comandos e a prova de funcionamento.
 
-O workspace dedicado desta publicação será **Web III — Estoque**, com os serviços e as cotas de uso do projeto organizados nesse espaço. O código é mantido no repositório `controle_estoque_web_tcc`.
+O workspace dedicado desta publicação é **WEB III - ESTOQUE**, com os serviços e as cotas de uso do projeto organizados nesse espaço. O código é mantido no repositório `controle_estoque_web_tcc`.
 
 | Serviço | Configuração |
 | --- | --- |
 | Neon | Projeto `progweb3-estoque` no plano Free, conexão direta com SSL |
 | API no Render | Docker, Root Directory em branco, Dockerfile Path `./Dockerfile`, plano Free |
-| Flutter no Render | Static Site, Root Directory `frontend`, Publish Directory `build/web` |
+| Flutter no Render | Static Site, Root Directory em branco, Publish Directory `frontend/build/web` |
 
 Na API, defina `DATABASE_URL` com a URL direta do Neon, usando o prefixo `postgresql+psycopg://` e preservando os parâmetros `sslmode=require` e `channel_binding=require` fornecidos pelo painel. Gere uma `SECRET_KEY` no Render.
 
 No Static Site, configure `API_URL` com a origem HTTPS da API, sem caminho ou barra final, e use este Build Command:
 
 ```bash
-git clone --branch 3.47.6 --depth 1 https://github.com/flutter/flutter.git sdk && sdk/bin/flutter build web --dart-define="API_URL=${API_URL:?Defina API_URL no Render}"
+cd frontend && git clone --branch 3.47.6 --depth 1 https://github.com/flutter/flutter.git sdk && sdk/bin/flutter build web --dart-define="API_URL=${API_URL:?Defina API_URL no Render}"
 ```
 
 Depois que o app receber seu endereço, adicione `ENDERECO_DO_APP` na API com essa origem HTTPS e faça seu deploy novamente. O contêiner aplica as migrações com Alembic antes de subir o Uvicorn.
@@ -183,4 +183,9 @@ As APIs gratuitas do mesmo workspace do Render compartilham 750 horas mensais. O
 
 ### No ar
 
-Endereços públicos pendentes de publicação. Após validar o sistema, registre aqui o URL do app e o URL da API com `/docs`. O banco deste projeto será hospedado no Neon.
+- App — https://progweb3-estoque-app.onrender.com
+- API — https://progweb3-estoque-api.onrender.com/docs
+
+O banco PostgreSQL é hospedado no projeto `progweb3-estoque` do Neon, na região AWS N. Virginia. Os serviços do Render pertencem ao workspace **WEB III - ESTOQUE**.
+
+A API usa o plano Free e pode levar cerca de um minuto para responder após ficar ociosa.
