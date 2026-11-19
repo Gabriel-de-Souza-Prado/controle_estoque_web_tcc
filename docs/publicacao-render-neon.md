@@ -8,9 +8,11 @@ A publicação atual usa o workspace **WEB III - ESTOQUE** e os seguintes endere
 | --- | --- |
 | App | https://progweb3-estoque-app.onrender.com |
 | API | https://progweb3-estoque-api.onrender.com/docs |
-| Banco | Projeto `progweb3-estoque` no Neon, banco `controle_estoque`, branch `main` |
+| Banco | [Painel do Neon](https://console.neon.tech/app/projects/royal-lake-83000084), projeto `progweb3-estoque`, banco `controle_estoque`, branch `main` |
 
 As configurações abaixo correspondem a este repositório, que tem `Dockerfile`, `pyproject.toml`, `app/` e `alembic/` na raiz e a interface em `frontend/`.
+
+A raiz da API redireciona o navegador para o app por meio de `ENDERECO_DO_APP`. A interface apresenta o login para visitantes sem sessão.
 
 **1. Enviar a versão atualizada ao GitHub**
 

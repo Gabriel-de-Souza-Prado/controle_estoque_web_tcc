@@ -11,7 +11,7 @@ O projeto usa arquitetura em camadas, com Service Layer e Repository:
 - **Models:** representam os dados; no backend, `schemas.py` valida os contratos de entrada e saída e `models.py` mapeia as tabelas.
 - **Composição:** `main.dart` conecta os repositórios aos serviços com Provider; `dependencias.py` conecta repositories, services e autenticação no backend; `main.py` registra rotas e tratamentos HTTP dos erros de negócio.
 
-As telas chamam os serviços. Apenas os repositórios do Flutter montam os pedidos HTTP e convertem JSON. O `EquipamentoService` obtém o token no `AuthService`, sem expô-lo às telas de equipamentos. No backend, os controllers recebem os pedidos e um service por injeção de dependência. Os serviços aplicam as regras e recebem repositories, sem sessão de banco ou HTTP. Somente os repositories usam a sessão para consultar e gravar. A rota de saúde `/` apenas informa que a API está em execução.
+As telas chamam os serviços. Apenas os repositórios do Flutter montam os pedidos HTTP e convertem JSON. O `EquipamentoService` obtém o token no `AuthService`, sem expô-lo às telas de equipamentos. No backend, os controllers recebem os pedidos e um service por injeção de dependência. Os serviços aplicam as regras e recebem repositories, sem sessão de banco ou HTTP. Somente os repositories usam a sessão para consultar e gravar. A raiz `/` redireciona para a interface quando `ENDERECO_DO_APP` está configurada. No ambiente local sem essa variável, ela informa o status da API.
 
 ## Requisitos
 
@@ -140,7 +140,7 @@ flutter test test/formulario_test.dart
 flutter test test/lista_test.dart
 ```
 
-O backend tem **28 testes**: os 13 testes anteriores, que o pytest também reconhece, e 15 casos de endpoint da aula 14. A fixture `cliente`, em `conftest.py`, cria um SQLite em memória por teste e substitui a conexão da API. Os testes novos criam a conta e fazem login pelas rotas HTTP antes das operações; cobrem busca, CRUD, recusas, dono do token e estoque compartilhado. O PostgreSQL local não é aberto.
+O backend tem **30 testes**, incluindo os 28 casos de negócio e dois testes da entrada da API, que conferem o redirecionamento para o app e o status local. A fixture `cliente`, em `conftest.py`, cria um SQLite em memória por teste e substitui a conexão da API. Os testes novos criam a conta e fazem login pelas rotas HTTP antes das operações; cobrem busca, CRUD, recusas, dono do token e estoque compartilhado. O PostgreSQL local não é aberto.
 
 O Flutter tem **60 testes**, com HTTP e armazenamento de sessão simulados. `formulario_test.dart` verifica validação sem API; `lista_test.dart` verifica os dados recebidos e a lista vazia; os testes anteriores cobrem autenticação, CRUD, busca/filtro, navegação, avisos, recusas e contratos HTTP.
 
@@ -185,7 +185,10 @@ As APIs gratuitas do mesmo workspace do Render compartilham 750 horas mensais. O
 
 - App — https://progweb3-estoque-app.onrender.com
 - API — https://progweb3-estoque-api.onrender.com/docs
+- Painel do banco — https://console.neon.tech/app/projects/royal-lake-83000084
 
 O banco PostgreSQL é hospedado no projeto `progweb3-estoque` do Neon, na região AWS N. Virginia. Os serviços do Render pertencem ao workspace **WEB III - ESTOQUE**.
 
 A API usa o plano Free e pode levar cerca de um minuto para responder após ficar ociosa.
+
+Abrir a raiz da API no navegador também leva ao app. O formulário de login aparece automaticamente para quem ainda está sem sessão.

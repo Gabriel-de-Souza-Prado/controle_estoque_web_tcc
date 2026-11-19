@@ -133,3 +133,22 @@ def test_token_vencido_devolve_401(cliente):
     }, SECRET_KEY, algorithm=ALGORITMO)
     resposta = cliente.get("/equipamentos/", headers={"Authorization": "Bearer " + token})
     assert resposta.status_code == 401
+
+
+def test_raiz_redireciona_para_app_quando_configurado(cliente, monkeypatch):
+    monkeypatch.setattr("app.main.endereco_do_app", "https://estoque.example.com")
+
+    resposta = cliente.get("/", follow_redirects=False)
+
+    assert resposta.status_code == 307
+    assert resposta.headers["location"] == "https://estoque.example.com"
+    assert cliente.get("/docs").status_code == 200
+
+
+def test_raiz_informa_status_sem_endereco_do_app(cliente, monkeypatch):
+    monkeypatch.setattr("app.main.endereco_do_app", "")
+
+    resposta = cliente.get("/")
+
+    assert resposta.status_code == 200
+    assert resposta.json() == {"status": "de pe e seguro!"}
