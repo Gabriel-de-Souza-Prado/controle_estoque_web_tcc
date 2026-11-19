@@ -159,6 +159,8 @@ flutter build web
 
 A API é publicada como Web Service Docker no Render e o Flutter como Static Site. O PostgreSQL fica em um projeto próprio do Neon. O [roteiro completo de publicação](docs/publicacao-render-neon.md) traz os campos de cada tela, os comandos e a prova de funcionamento.
 
+O workspace dedicado desta publicação será **Web III — Estoque**, com os serviços e as cotas de uso do projeto organizados nesse espaço. O código é mantido no repositório `controle_estoque_web_tcc`.
+
 | Serviço | Configuração |
 | --- | --- |
 | Neon | Projeto `progweb3-estoque` no plano Free, conexão direta com SSL |

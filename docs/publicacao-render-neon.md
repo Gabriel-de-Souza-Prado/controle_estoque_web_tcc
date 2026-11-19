@@ -68,6 +68,8 @@ Mantenha o usuário, a senha, o host, o banco e os parâmetros fornecidos pelo N
 
 **3. Criar a API no Render**
 
+Use um workspace dedicado ao Web III. No painel do Render, abra o menu de workspaces no canto superior esquerdo, escolha **+ New Workspace**, informe **Web III — Estoque** e selecione **Hobby**. A franquia de uso pertence ao workspace. Os serviços do estoque serão criados nesse novo espaço. [Workspaces do Render](https://render.com/docs/team-members)
+
 Abra o [painel do Render](https://dashboard.render.com/) e escolha **New → Web Service**. Conecte o repositório do estoque usando **Git Provider**. Se o repositório for público, a opção **Public Git Repository** também permite informar seu endereço.
 
 Use as seguintes configurações:
