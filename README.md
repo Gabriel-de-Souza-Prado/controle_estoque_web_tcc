@@ -15,94 +15,36 @@ As telas chamam os serviços. Apenas os repositórios do Flutter montam os pedid
 
 ## Requisitos
 
-- Python **3.14** para reproduzir as versões fixadas em `poetry.lock`. O `pyproject.toml` aceita Python 3.14 ou superior.
-- Poetry para instalar as dependências de `poetry.lock`.
-- PostgreSQL local, por padrão em `localhost:5432`.
-- Flutter compatível com **Dart 3.13.5**; validado com Flutter **3.47.6**.
-- Chrome ou Edge para executar a interface web.
+- Python **3.14**.
+- Poetry. A imagem da API usa a versão **2.5.1**.
+- Flutter **3.47.6**, com Dart **3.13.5**.
+- Edge ou Chrome para executar a interface web.
 
-O backend fica na raiz do repositório, em `app/`. A interface fica em `frontend/`.
+A API e as migrações ficam na raiz do repositório. A interface fica em `frontend/`. O ambiente local usa SQLite por padrão, e a publicação usa PostgreSQL.
 
-## Executar nesta máquina
+## Rodar no Windows
 
-O `.env` e o ambiente `.venv` já estão preparados. Na raiz do projeto:
-
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
-```
-
-Em outro terminal, dentro de `frontend/`:
+Na raiz, instale as dependências do backend:
 
 ```powershell
-flutter run -d edge --web-port 5000
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install poetry==2.5.1
+.\.venv\Scripts\poetry.exe install --no-root
 ```
 
-Ambiente local validado com Python **3.14.8** e Flutter **3.47.6** (Dart **3.13.5**). As dependências Python foram instaladas na `.venv` conforme `poetry.lock`. O grupo `dev` inclui `pytest` e `httpx`; para reproduzir o ambiente, use `poetry install --no-root`. O lock foi atualizado para incluir as ferramentas de teste da aula 14. O `.env` e a `.venv` são locais e não acompanham o repositório.
-
-Para verificar este ambiente já preparado, na raiz:
+Em um clone ou ZIP novo, crie o `.env` com uma chave de sessão aleatória. Se o arquivo já existir, mantenha a configuração atual.
 
 ```powershell
-.\.venv\Scripts\poetry.exe run pytest
+if (-not (Test-Path .env)) {
+    .\.venv\Scripts\python.exe -c "from pathlib import Path; import secrets; modelo = Path('.env.example').read_text(encoding='utf-8'); Path('.env').write_text(modelo.replace('SUBSTITUA_POR_UMA_CHAVE_ALEATORIA', secrets.token_hex(48)), encoding='utf-8')"
+}
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-## Configuração local
+A documentação interativa abre em [`127.0.0.1:8000/docs`](http://127.0.0.1:8000/docs). O SQLite guarda os dados em `controle_estoque.db`. Para usar um PostgreSQL local, crie o banco, configure `DATABASE_URL` no formato indicado em `.env.example` e execute as mesmas migrações.
 
-Na raiz, copie o modelo se ainda não existir `.env`:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Preencha `DATABASE_URL` com a conexão PostgreSQL. O formato usado pelo driver instalado é:
-
-```dotenv
-DATABASE_URL=postgresql+psycopg://postgres:SUA_SENHA@localhost:5432/controle_estoque
-SECRET_KEY=SUA_CHAVE_ALEATORIA
-```
-
-Gere uma chave para `SECRET_KEY` com:
-
-```powershell
-python -c "import secrets; print(secrets.token_hex(48))"
-```
-
-O `.env` local já foi reconstruído nesta máquina. Não compartilhe esse arquivo: ele contém credenciais e é ignorado pelo Git. O `.env.example` serve como modelo, sem a chave real.
-
-O banco `controle_estoque` deve existir antes de aplicar as migrações. Se estiver preparando uma instalação nova, crie-o no pgAdmin ou no PostgreSQL:
-
-```sql
-CREATE DATABASE controle_estoque;
-```
-
-Instale as dependências e confira a situação das migrações:
-
-```powershell
-poetry install --no-root
-poetry run alembic current
-poetry run alembic heads
-```
-
-Para um banco novo ou com migrações pendentes, aplique:
-
-```powershell
-poetry run alembic upgrade head
-```
-
-As migrações estão em `alembic/versions/`. A aplicação não cria tabelas automaticamente ao iniciar. Um banco existente com tabelas criadas fora do Alembic precisa ser conferido antes de aplicar migrações.
-
-## Executar a API
-
-Na raiz:
-
-```powershell
-poetry run python -m uvicorn app.main:app --reload
-```
-
-API: http://127.0.0.1:8000. Documentação interativa: http://127.0.0.1:8000/docs.
-
-## Executar o Flutter Web
-
-Em outro terminal:
+Em outro terminal, na raiz do projeto, rode o Flutter:
 
 ```powershell
 cd frontend
@@ -110,7 +52,8 @@ flutter pub get
 flutter run -d edge --web-port 5000
 ```
 
-Para Chrome, troque `edge` por `chrome`. A porta fixa mantém a mesma origem do navegador entre execuções e permite reutilizar o token salvo. O endereço da API está em `frontend/lib/repositories/usuario_repository.dart`.
+Para Chrome, use `-d chrome`. O app fica em [`localhost:5000`](http://localhost:5000). Mantenha a porta fixa para que o navegador reutilize o token salvo. O build local usa a API em `http://127.0.0.1:8000` por padrão.
+
 
 ## Funcionalidades do app
 
@@ -178,12 +121,7 @@ poetry install --no-root
 poetry run pytest
 ```
 
-Nesta máquina o Poetry está na `.venv`. Sem ativar o ambiente, os comandos equivalentes são:
-
-```powershell
-.\.venv\Scripts\poetry.exe install --no-root
-.\.venv\Scripts\poetry.exe run pytest
-```
+Se você seguiu a configuração local acima, também pode usar `.\.venv\Scripts\python.exe -m pytest`.
 
 Em `frontend/`:
 
@@ -217,6 +155,30 @@ flutter analyze
 flutter build web
 ```
 
-## Reta final e nuvem
+## Encontro 15 — Render e Neon
 
-O [plano da aula 14](docs/aula14.md) registra o cronograma, a conferência dos 12 critérios da rubrica, a prova dos testes e os conceitos de Docker. Publicação, endereços públicos e Dockerfile ficam para a prática do encontro 15. Reserva da apresentação e demonstração ainda estão pendentes. O histórico atual tem commits em três dias diferentes; a rubrica pede quatro ou mais.
+A API é publicada como Web Service Docker no Render e o Flutter como Static Site. O PostgreSQL fica em um projeto próprio do Neon. O [roteiro completo de publicação](docs/publicacao-render-neon.md) traz os campos de cada tela, os comandos e a prova de funcionamento.
+
+| Serviço | Configuração |
+| --- | --- |
+| Neon | Projeto `progweb3-estoque` no plano Free, conexão direta com SSL |
+| API no Render | Docker, Root Directory em branco, Dockerfile Path `./Dockerfile`, plano Free |
+| Flutter no Render | Static Site, Root Directory `frontend`, Publish Directory `build/web` |
+
+Na API, defina `DATABASE_URL` com a URL direta do Neon, usando o prefixo `postgresql+psycopg://` e preservando os parâmetros `sslmode=require` e `channel_binding=require` fornecidos pelo painel. Gere uma `SECRET_KEY` no Render.
+
+No Static Site, configure `API_URL` com a origem HTTPS da API, sem caminho ou barra final, e use este Build Command:
+
+```bash
+git clone --branch 3.47.6 --depth 1 https://github.com/flutter/flutter.git sdk && sdk/bin/flutter build web --dart-define="API_URL=${API_URL:?Defina API_URL no Render}"
+```
+
+Depois que o app receber seu endereço, adicione `ENDERECO_DO_APP` na API com essa origem HTTPS e faça seu deploy novamente. O contêiner aplica as migrações com Alembic antes de subir o Uvicorn.
+
+O SQLAlchemy verifica as conexões reaproveitadas com `pool_pre_ping=True`, para lidar com conexões encerradas quando o banco fica ocioso. [SQLAlchemy no Neon](https://neon.com/docs/guides/sqlalchemy)
+
+As APIs gratuitas do mesmo workspace do Render compartilham 750 horas mensais. O Neon tem suas próprias cotas gratuitas de armazenamento e computação. [Limites do Render](https://render.com/docs/free) · [Plano do Neon](https://neon.com/pricing)
+
+### No ar
+
+Endereços públicos pendentes de publicação. Após validar o sistema, registre aqui o URL do app e o URL da API com `/docs`. O banco deste projeto será hospedado no Neon.

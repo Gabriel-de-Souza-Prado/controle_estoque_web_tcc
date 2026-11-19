@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/usuario_model.dart';
 
-// Onde a API roda: o uvicorn, na porta de sempre.
-const enderecoDaApi = 'http://127.0.0.1:8000';
+// O build do Flutter pode definir a URL com --dart-define=API_URL=...
+const enderecoDaApi = String.fromEnvironment(
+  'API_URL',
+  defaultValue: 'http://127.0.0.1:8000',
+);
 
 // A API disse não: o código HTTP e a frase que ela mandou, já em texto simples.
 // É a língua do repositório; quem decide o que a tela mostra é o service.

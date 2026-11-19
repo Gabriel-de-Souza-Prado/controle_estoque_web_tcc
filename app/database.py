@@ -16,7 +16,8 @@ URL = os.environ["DATABASE_URL"]
 # quando a URL vira postgresql://, ela some sozinha.
 ARGS = {"check_same_thread": False} if URL.startswith("sqlite") else {}
 
-engine = create_engine(URL, connect_args=ARGS)
+# Confere conexões reaproveitadas depois que o banco da nuvem fica ocioso.
+engine = create_engine(URL, connect_args=ARGS, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 
 

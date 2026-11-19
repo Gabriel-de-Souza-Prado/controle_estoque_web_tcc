@@ -1,5 +1,7 @@
+import os
+
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware # <-- IMPORTANTE
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.produtos.erros import DtiJaCadastrado, EquipamentoNaoEncontrado, SituacaoInvalida
 from app.usuarios.erros import CredenciaisInvalidas, EmailJaCadastrado
@@ -11,11 +13,11 @@ from app.usuarios import controller as usuarios_controller
 
 app = FastAPI(title="Controle de Estoque TI", version="0.1.0")
 
-# <-- ADICIONE ESTE BLOCO PARA LIBERAR O FLUTTER WEB -->
+endereco_do_app = os.getenv("ENDERECO_DO_APP", "").strip().rstrip("/")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Permite o Flutter Web acessar a API
-    allow_credentials=True,
+    allow_origins=[endereco_do_app] if endereco_do_app else [],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_methods=["*"],
     allow_headers=["*"],
 )
